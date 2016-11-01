@@ -63,7 +63,7 @@ void ui_approval(void);
 #define TEXT_HEIGHT 15
 #define TEXT_SPACE 4
 
-#define CLA 0x80
+#define CLA 0xE0
 #define INS_SIGN 0x02
 #define INS_GET_PUBLIC_KEY 0x04
 #define INS_GET_APP_CONFIGURATION 0x06
@@ -414,17 +414,18 @@ unsigned int io_seproxyhal_touch_exit(bagl_element_t *e) {
 unsigned int io_seproxyhal_touch_approve(bagl_element_t *e) {
     unsigned int tx = 0;
     // Update the hash
-    cx_hash(&hash.header, 0, G_io_apdu_buffer + 5, G_io_apdu_buffer[4], NULL);
+    //cx_hash(&hash.header, 0, G_io_apdu_buffer + 5, G_io_apdu_buffer[4], NULL);
     if (G_io_apdu_buffer[2] == P1_LAST) {
         // Hash is finalized, send back the signature
         unsigned char result[32];
-        cx_hash(&hash.header, CX_LAST, G_io_apdu_buffer, 0, result);
+        //cx_hash(&hash.header, CX_LAST, G_io_apdu_buffer, 0, result);
         unsigned char messageData[32] = {
             0x09, 0xBB, 0xE3, 0x74, 0xC4, 0x16, 0xCE, 0x39, 0x97, 0xB8, 0xC6, 0x9C, 0xC6, 0xD1, 0x5C, 0xD1, 0x4B, 0xE0, 0x4F, 0x89, 0x64, 0x08, 0xEE,
             0xF1, 0xB4, 0x75, 0xE3, 0x7C, 0xCE, 0x58, 0x36, 0x21
         };
-        tx = cx_ecdsa_sign(&N_privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
-                           messageData, sizeof(messageData), G_io_apdu_buffer);
+
+        tx = cx_ecdsa_sign(&N_privateKey, CX_RND_RFC6979, CX_SHA256,
+                           G_io_apdu_buffer + 5, 32, G_io_apdu_buffer);
         G_io_apdu_buffer[0] &= 0xF0; // discard the parity information
         hashTainted = 1;
     }
