@@ -418,6 +418,7 @@ unsigned int io_seproxyhal_touch_approve(bagl_element_t *e) {
     if (G_io_apdu_buffer[2] == P1_LAST) {
         // Hash is finalized, send back the signature
         unsigned char result[32];
+		os_memmove(&result,G_io_apdu_buffer + 5,32);
         //cx_hash(&hash.header, CX_LAST, G_io_apdu_buffer, 0, result);
         unsigned char messageData[32] = {
             0x09, 0xBB, 0xE3, 0x74, 0xC4, 0x16, 0xCE, 0x39, 0x97, 0xB8, 0xC6, 0x9C, 0xC6, 0xD1, 0x5C, 0xD1, 0x4B, 0xE0, 0x4F, 0x89, 0x64, 0x08, 0xEE,
@@ -425,7 +426,7 @@ unsigned int io_seproxyhal_touch_approve(bagl_element_t *e) {
         };
 
         tx = cx_ecdsa_sign(&N_privateKey, CX_RND_RFC6979, CX_SHA256,
-                           G_io_apdu_buffer + 5, 32, G_io_apdu_buffer);
+                           &result, 32, G_io_apdu_buffer);
         G_io_apdu_buffer[0] &= 0xF0; // discard the parity information
         hashTainted = 1;
     }
@@ -517,10 +518,17 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                 current_text_pos = 0;
                 text_y = 60;
                 G_io_apdu_buffer[5 + G_io_apdu_buffer[4]] = '\0';
-
-                display_text_part();
-                ui_text();
-
+				
+				if(G_io_apdu_buffer[2] == P1_MORE)
+				{
+					display_text_part();
+					ui_text();
+				}
+				else
+				{
+					io_seproxyhal_touch_approve(NULL);
+				}
+				
                 *flags |= IO_ASYNCH_REPLY;
             } break;
 
